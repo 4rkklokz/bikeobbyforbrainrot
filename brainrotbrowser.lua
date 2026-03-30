@@ -330,6 +330,16 @@ local function clearEntries()
 	entryCount = 0
 end
 
+-- Reads the JobId stored on a brainrot folder.
+-- The game stores it as an attribute called "JobId" OR as a StringValue child called "JobId".
+local function getJobId(folder)
+	local attr = folder:GetAttribute("JobId")
+	if attr and attr ~= "" then return attr end
+	local sv = folder:FindFirstChild("JobId")
+	if sv and sv:IsA("StringValue") and sv.Value ~= "" then return sv.Value end
+	return nil
+end
+
 local function makeEntry(name, jobId, order)
 	local card = Instance.new("Frame")
 	card.Size = UDim2.new(1, 0, 0, 58)
@@ -410,6 +420,7 @@ local function makeEntry(name, jobId, order)
 		btn.Text = "..."
 		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(50, 35, 120) }):Play()
 
+		-- Teleport to the specific server using its JobId
 		local ok, err = pcall(function()
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
 		end)
@@ -432,10 +443,14 @@ local function populateList()
 	if folder then
 		local order = 0
 		for _, v in ipairs(folder:GetChildren()) do
+			-- Only show whitelisted brainrots that are actually present AND have a valid JobId
 			if v:IsA("Folder") and WHITELIST[v.Name] then
-				order += 1
-				entryCount += 1
-				makeEntry(v.Name, v.Name, order)
+				local jobId = getJobId(v)
+				if jobId then
+					order += 1
+					entryCount += 1
+					makeEntry(v.Name, jobId, order)
+				end
 			end
 		end
 	end
@@ -469,4 +484,10 @@ end)
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
+end)
+
+-- Auto re-execute when teleported into a new server
+TeleportService.LocalPlayerArrivedFromTeleport:Connect(function()
+	task.wait(2) -- wait for ReplicatedStorage to populate
+	populateList()
 end)
