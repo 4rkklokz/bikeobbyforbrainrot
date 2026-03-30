@@ -319,12 +319,11 @@ miniBtn.MouseButton1Click:Connect(function()
 end)
 
 local entryCount = 0
+local HttpService = game:GetService("HttpService")
 
 local function clearEntries()
 	for _, c in ipairs(scroll:GetChildren()) do
-		if c:IsA("Frame") then
-			c:Destroy()
-		end
+		if c:IsA("Frame") then c:Destroy() end
 	end
 	emptyLabel.Visible = false
 	entryCount = 0
@@ -426,68 +425,37 @@ local function makeEntry(name, jobId, order)
 	end)
 end
 
--- Fetches server list pages from Roblox API and searches for whitelisted players
--- Returns a table of { name = playerName, jobId = jobId }
-local function findWhitelistedServers()
+-- Check if current server has any whitelisted brainrot folders
+local function checkCurrentServer()
+	local folder = ReplicatedStorage:FindFirstChild("Brainrots")
+	if not folder then return {} end
 	local found = {}
-	local HttpService = game:GetService("HttpService")
-	local placeId = game.PlaceId
-	local cursor = ""
-	local pageLimit = 10 -- check up to 10 pages of servers
-
-	for i = 1, pageLimit do
-		local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
-		if cursor ~= "" then
-			url = url .. "&cursor=" .. cursor
-		end
-
-		local ok, result = pcall(function()
-			return HttpService:GetAsync(url)
-		end)
-		if not ok or not result then break end
-
-		local decoded
-		local decodeOk = pcall(function()
-			decoded = HttpService:JSONDecode(result)
-		end)
-		if not decodeOk or not decoded or not decoded.data then break end
-
-		for _, server in ipairs(decoded.data) do
-			if server.playerIds then
-				for _, uid in ipairs(server.playerIds) do
-					-- Look up username from userId
-					local nameOk, nameResult = pcall(function()
-						return HttpService:GetAsync("https://users.roblox.com/v1/users/" .. uid)
-					end)
-					if nameOk and nameResult then
-						local userData
-						pcall(function() userData = HttpService:JSONDecode(nameResult) end)
-						if userData and userData.name and WHITELIST[userData.name] then
-							-- Check not already found
-							local alreadyFound = false
-							for _, f in ipairs(found) do
-								if f.jobId == server.id then alreadyFound = true break end
-							end
-							if not alreadyFound then
-								table.insert(found, { name = userData.name, jobId = server.id })
-							end
-						end
-					end
-				end
-			end
-		end
-
-		-- If we already found all 3, stop early
-		if #found >= 3 then break end
-
-		if decoded.nextPageCursor and decoded.nextPageCursor ~= "" then
-			cursor = decoded.nextPageCursor
-		else
-			break
+	for _, v in ipairs(folder:GetChildren()) do
+		if v:IsA("Folder") and WHITELIST[v.Name] then
+			table.insert(found, { name = v.Name, jobId = game.JobId })
 		end
 	end
-
 	return found
+end
+
+-- Get a list of server JobIds from Roblox API, excluding current server
+local function getServerJobIds(excludeJobId)
+	local jobIds = {}
+	local ok, result = pcall(function()
+		return HttpService:GetAsync(
+			"https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+		)
+	end)
+	if not ok or not result then return jobIds end
+	local decoded
+	pcall(function() decoded = HttpService:JSONDecode(result) end)
+	if not decoded or not decoded.data then return jobIds end
+	for _, server in ipairs(decoded.data) do
+		if server.id and server.id ~= excludeJobId then
+			table.insert(jobIds, server.id)
+		end
+	end
+	return jobIds
 end
 
 local function populateList()
@@ -495,30 +463,38 @@ local function populateList()
 	countLabel.Text = "Searching..."
 
 	task.spawn(function()
-		local results = findWhitelistedServers()
-		entryCount = 0
+		-- First check the server we're already in
+		local found = checkCurrentServer()
 
-		for order, entry in ipairs(results) do
-			entryCount += 1
-			makeEntry(entry.name, entry.jobId, order)
-		end
-
-		if entryCount == 0 then
+		if #found > 0 then
+			for order, entry in ipairs(found) do
+				entryCount += 1
+				makeEntry(entry.name, entry.jobId, order)
+			end
+			countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
+		else
 			emptyLabel.Visible = true
+			countLabel.Text = "0 servers available"
 		end
-		countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
 	end)
 end
 
 refreshBtn.MouseButton1Click:Connect(function()
 	refreshBtn.Text = "..."
 	populateList()
-	task.wait(0.4)
+	task.wait(0.5)
 	refreshBtn.Text = "Refresh"
 end)
 
+-- On load, check current server immediately
 task.spawn(function()
-	task.wait(1)
+	task.wait(2) -- wait for RS to replicate
+	populateList()
+end)
+
+-- Auto re-check when teleported into a new server
+TeleportService.LocalPlayerArrivedFromTeleport:Connect(function()
+	task.wait(3)
 	populateList()
 end)
 
@@ -526,7 +502,7 @@ layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
 end)
 
--- SERVER HOP button
+-- SERVER HOP button — fetches server list and jumps to a different server each time
 local hopBtn = Instance.new("TextButton")
 hopBtn.Size = UDim2.new(1, -20, 0, 36)
 hopBtn.Position = UDim2.new(0, 10, 1, -180)
@@ -563,42 +539,29 @@ end)
 hopBtn.MouseButton1Click:Connect(function()
 	if not hopBtn.Active then return end
 	hopBtn.Active = false
-	hopBtn.Text = "Hopping..."
+	hopBtn.Text = "Finding server..."
 	TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(40, 28, 90) }):Play()
 
-	-- Get a server that is NOT the current one
 	task.spawn(function()
-		local HttpService = game:GetService("HttpService")
-		local currentJobId = game.JobId
-		local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-		local ok, result = pcall(function() return HttpService:GetAsync(url) end)
-		if ok and result then
-			local decoded
-			pcall(function() decoded = HttpService:JSONDecode(result) end)
-			if decoded and decoded.data then
-				for _, server in ipairs(decoded.data) do
-					if server.id ~= currentJobId then
-						local tpOk, tpErr = pcall(function()
-							TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, player)
-						end)
-						if tpOk then return end
-					end
-				end
+		local jobIds = getServerJobIds(game.JobId)
+		if #jobIds > 0 then
+			-- Pick a random one from the list so we don't always go to the same server
+			local pick = jobIds[math.random(1, #jobIds)]
+			local ok, err = pcall(function()
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, pick, player)
+			end)
+			if not ok then
+				warn(err)
+				hopBtn.Text = "⚡  SERVER HOP"
+				TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
+				hopBtn.Active = true
 			end
+		else
+			-- No other servers found, fallback
+			pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
 		end
-		-- Fallback: random server
-		pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
-		hopBtn.Text = "⚡  SERVER HOP"
-		TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
-		hopBtn.Active = true
 	end)
 end)
 
 makeTeleportBtn("Teleport to Divine Area", -128, Color3.fromRGB(78, 48, 172), Color3.fromRGB(100, 65, 210), -3434.6, 1450.33, 7881.85)
 makeTeleportBtn("Teleport to Home", -76, Color3.fromRGB(38, 108, 158), Color3.fromRGB(52, 132, 188), -3392.6, 1449.33, -2911.57)
-
--- Auto re-run when teleported to a new server
-TeleportService.LocalPlayerArrivedFromTeleport:Connect(function()
-	task.wait(3)
-	populateList()
-end)
