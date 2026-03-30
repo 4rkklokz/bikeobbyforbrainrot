@@ -1,51 +1,34 @@
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
 local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 240, 0, 170)
-frame.Position = UDim2.new(0.5, -120, 0.5, -85)
+frame.Size = UDim2.new(0, 220, 0, 170)
+frame.Position = UDim2.new(1, -240, 0.5, -85)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
 frame.BorderSizePixel = 0
 frame.Parent = gui
 Instance.new("UICorner", frame)
 
-local function drag(obj)
-	local dragging = false
-	local dragStart, startPos
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.Parent = frame
 
-	obj.InputBegan:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = i.Position
-			startPos = obj.Position
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(i)
-		if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = i.Position - dragStart
-			obj.Position = UDim2.new(
-				startPos.X.Scale, startPos.X.Offset + delta.X,
-				startPos.Y.Scale, startPos.Y.Offset + delta.Y
-			)
-		end
-	end)
-
-	UserInputService.InputEnded:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
-		end
-	end)
-end
-
-drag(frame)
+local hue = 0
+task.spawn(function()
+	while true do
+		hue += 0.01
+		if hue > 1 then hue = 0 end
+		stroke.Color = Color3.fromHSV(hue,1,1)
+		task.wait()
+	end
+end)
 
 local function makeBtn(text, y, color, callback)
 	local b = Instance.new("TextButton")
@@ -77,42 +60,32 @@ makeBtn("Teleport to Home", 60, Color3.fromRGB(50,120,180), function()
 end)
 
 local function getServer()
-	local servers = {}
-	local cursor = ""
+	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+	local ok, res = pcall(function()
+		return game:HttpGet(url)
+	end)
 
-	for i = 1,6 do
-		local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100&cursor="..cursor
-		local s,r = pcall(function() return HttpService:GetAsync(url) end)
-		if not s then break end
+	if ok then
+		local data = HttpService:JSONDecode(res)
+		local servers = {}
 
-		local data = HttpService:JSONDecode(r)
-
-		for _,v in ipairs(data.data) do
-			if v.id ~= game.JobId and v.playing < math.floor(v.maxPlayers * 0.5) then
-				table.insert(servers, v.id)
+		for _,server in pairs(data.data) do
+			if server.id ~= game.JobId and server.playing < server.maxPlayers then
+				table.insert(servers, server.id)
 			end
 		end
 
-		if data.nextPageCursor then
-			cursor = data.nextPageCursor
-		else
-			break
+		if #servers > 0 then
+			return servers[math.random(1,#servers)]
 		end
-	end
-
-	if #servers > 0 then
-		return servers[math.random(1,#servers)]
 	end
 end
 
 makeBtn("Server Hop", 110, Color3.fromRGB(80,50,150), function()
-	for i = 1,5 do
-		local id = getServer()
-		if id then
-			local success = pcall(function()
-				TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-			end)
-			if success then break end
-		end
+	local id = getServer()
+	if id then
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+	else
+		TeleportService:Teleport(game.PlaceId, player)
 	end
 end)
