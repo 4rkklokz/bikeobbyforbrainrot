@@ -4,6 +4,74 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
+local function tpTo(cf)
+	local c = player.Character or player.CharacterAdded:Wait()
+	local hrp = c:WaitForChild("HumanoidRootPart")
+	hrp.CFrame = cf
+end
+
+tpTo(CFrame.new(-3434.6,1450.33,7881.85))
+
+local function instantPrompts()
+	for _, v in pairs(workspace:GetDescendants()) do
+		if v:IsA("ProximityPrompt") then
+			v.HoldDuration = 0
+		end
+	end
+
+	workspace.DescendantAdded:Connect(function(v)
+		if v:IsA("ProximityPrompt") then
+			v.HoldDuration = 0
+		end
+	end)
+end
+
+instantPrompts()
+
+local function watchPickup()
+	local zone = workspace:WaitForChild("ItemSpawns")
+
+	local function hook(item)
+		if item.Name == "SpawnedItem" then
+			item.AncestryChanged:Connect(function(_, parent)
+				if not parent then
+					tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
+				end
+			end)
+		end
+	end
+
+	for _, v in pairs(zone:GetDescendants()) do
+		hook(v)
+	end
+
+	zone.DescendantAdded:Connect(hook)
+end
+
+task.spawn(watchPickup)
+
+local function getServer()
+	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+	local ok, res = pcall(function()
+		return game:HttpGet(url)
+	end)
+
+	if ok then
+		local data = HttpService:JSONDecode(res)
+		local servers = {}
+
+		for _,server in pairs(data.data) do
+			if server.id ~= game.JobId and server.playing < server.maxPlayers then
+				table.insert(servers, server.id)
+			end
+		end
+
+		if #servers > 0 then
+			return servers[math.random(1,#servers)]
+		end
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -44,44 +112,15 @@ local function makeBtn(text, y, color, callback)
 	b.MouseButton1Click:Connect(callback)
 end
 
-local function tp(x,y,z)
-	local c = player.Character
-	if c and c:FindFirstChild("HumanoidRootPart") then
-		c.HumanoidRootPart.CFrame = CFrame.new(x,y,z)
-	end
-end
-
-makeBtn("Teleport to Divine", 10, Color3.fromRGB(90,60,200), function()
-	tp(-3434.6,1450.33,7881.85)
+makeBtn("Teleport to Divine", 10, Color3.fromRGB(140, 90, 255), function()
+	tpTo(CFrame.new(-3434.6,1450.33,7881.85))
 end)
 
-makeBtn("Teleport to Home", 60, Color3.fromRGB(50,120,180), function()
-	tp(-3392.6,1449.33,-2911.57)
+makeBtn("Teleport to Home", 60, Color3.fromRGB(80, 170, 255), function()
+	tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
 end)
 
-local function getServer()
-	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-	local ok, res = pcall(function()
-		return game:HttpGet(url)
-	end)
-
-	if ok then
-		local data = HttpService:JSONDecode(res)
-		local servers = {}
-
-		for _,server in pairs(data.data) do
-			if server.id ~= game.JobId and server.playing < server.maxPlayers then
-				table.insert(servers, server.id)
-			end
-		end
-
-		if #servers > 0 then
-			return servers[math.random(1,#servers)]
-		end
-	end
-end
-
-makeBtn("Server Hop", 110, Color3.fromRGB(80,50,150), function()
+makeBtn("Server Hop", 110, Color3.fromRGB(255, 100, 120), function()
 	local id = getServer()
 	if id then
 		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
