@@ -3,6 +3,7 @@ local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
 local WHITELIST = {
@@ -14,7 +15,6 @@ local WHITELIST = {
 local GUI_SIZE = UDim2.new(0, 370, 0, 500)
 local MINI_SIZE = UDim2.new(0, 46, 0, 46)
 
--- Start centered on screen
 local function getCenterPos()
 	local vp = workspace.CurrentCamera.ViewportSize
 	return UDim2.new(0, math.floor((vp.X - 370) / 2), 0, math.floor((vp.Y - 500) / 2))
@@ -49,7 +49,6 @@ frameBG.Color = ColorSequence.new({
 })
 frameBG.Rotation = 145
 frameBG.Parent = frame
-
 
 local titlebar = Instance.new("Frame")
 titlebar.Size = UDim2.new(1, 0, 0, 54)
@@ -136,7 +135,6 @@ countLabel.Font = Enum.Font.Gotham
 countLabel.TextXAlignment = Enum.TextXAlignment.Left
 countLabel.Parent = frame
 
--- Refresh button
 local refreshBtn = Instance.new("TextButton")
 refreshBtn.Size = UDim2.new(0, 72, 0, 20)
 refreshBtn.Position = UDim2.new(1, -82, 0, 69)
@@ -181,11 +179,10 @@ lpad.PaddingTop = UDim.new(0, 4)
 lpad.PaddingBottom = UDim.new(0, 8)
 lpad.Parent = scroll
 
--- Empty state label (shown when no whitelisted brainrots exist in folder)
 local emptyLabel = Instance.new("TextLabel")
 emptyLabel.Size = UDim2.new(1, 0, 0, 58)
 emptyLabel.BackgroundTransparency = 1
-emptyLabel.Text = "Empty :("
+emptyLabel.Text = "None found in this server"
 emptyLabel.TextColor3 = Color3.fromRGB(80, 65, 130)
 emptyLabel.TextSize = 14
 emptyLabel.Font = Enum.Font.GothamSemibold
@@ -213,14 +210,12 @@ local function makeTeleportBtn(text, yOff, bg, hover, x, y, z)
 	btn.AutoButtonColor = false
 	btn.Parent = frame
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
-
 	btn.MouseEnter:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = hover }):Play()
 	end)
 	btn.MouseLeave:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = bg }):Play()
 	end)
-
 	btn.MouseButton1Click:Connect(function()
 		TweenService:Create(btn, TweenInfo.new(0.08), { Size = UDim2.new(1, -28, 0, 40) }):Play()
 		task.wait(0.09)
@@ -233,9 +228,6 @@ local function makeTeleportBtn(text, yOff, bg, hover, x, y, z)
 		end
 	end)
 end
-
-makeTeleportBtn("Teleport to Divine Area", -128, Color3.fromRGB(78, 48, 172), Color3.fromRGB(100, 65, 210), -3434.6, 1450.33, 7881.85)
-makeTeleportBtn("Teleport to Home", -76, Color3.fromRGB(38, 108, 158), Color3.fromRGB(52, 132, 188), -3392.6, 1449.33, -2911.57)
 
 local miniBtn = Instance.new("TextButton")
 miniBtn.Size = MINI_SIZE
@@ -292,7 +284,6 @@ end
 makeDraggable(titlebar, frame)
 makeDraggable(miniBtn, miniBtn)
 
--- Close: shrink to top-left corner of current frame position
 closeBtn.MouseButton1Click:Connect(function()
 	local collapsePos = UDim2.new(frame.Position.X.Scale, frame.Position.X.Offset, frame.Position.Y.Scale, frame.Position.Y.Offset)
 	TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
@@ -305,7 +296,6 @@ closeBtn.MouseButton1Click:Connect(function()
 	miniBtn.Visible = true
 end)
 
--- Open: grow from top-left (miniBtn pos) toward bottom-right — Position stays the same, only Size grows
 miniBtn.MouseButton1Click:Connect(function()
 	local fromPos = miniBtn.Position
 	miniBtn.Visible = false
@@ -319,7 +309,6 @@ miniBtn.MouseButton1Click:Connect(function()
 end)
 
 local entryCount = 0
-local HttpService = game:GetService("HttpService")
 
 local function clearEntries()
 	for _, c in ipairs(scroll:GetChildren()) do
@@ -401,18 +390,14 @@ local function makeEntry(name, jobId, order)
 	btn.MouseButton1Click:Connect(function()
 		if not btn.Active then return end
 		btn.Active = false
-
 		TweenService:Create(btn, TweenInfo.new(0.08), { Size = UDim2.new(0, 66, 0, 28) }):Play()
 		task.wait(0.09)
 		TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 74, 0, 32) }):Play()
-
 		btn.Text = "..."
 		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(50, 35, 120) }):Play()
-
 		local ok, err = pcall(function()
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
 		end)
-
 		if not ok then
 			warn(err)
 			btn.Text = "Failed"
@@ -425,84 +410,68 @@ local function makeEntry(name, jobId, order)
 	end)
 end
 
--- Check if current server has any whitelisted brainrot folders
-local function checkCurrentServer()
-	local folder = ReplicatedStorage:FindFirstChild("Brainrots")
-	if not folder then return {} end
-	local found = {}
-	for _, v in ipairs(folder:GetChildren()) do
-		if v:IsA("Folder") and WHITELIST[v.Name] then
-			table.insert(found, { name = v.Name, jobId = game.JobId })
-		end
-	end
-	return found
-end
-
--- Get a list of server JobIds from Roblox API, excluding current server
-local function getServerJobIds(excludeJobId)
-	local jobIds = {}
+local function getRandomJobId(excludeId)
+	local sort = (math.random() > 0.5) and "Asc" or "Desc"
 	local ok, result = pcall(function()
 		return HttpService:GetAsync(
-			"https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+			"https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=" .. sort .. "&limit=100"
 		)
 	end)
-	if not ok or not result then return jobIds end
+	if not ok or not result then return nil end
 	local decoded
 	pcall(function() decoded = HttpService:JSONDecode(result) end)
-	if not decoded or not decoded.data then return jobIds end
-	for _, server in ipairs(decoded.data) do
-		if server.id and server.id ~= excludeJobId then
-			table.insert(jobIds, server.id)
+	if not decoded or not decoded.data or #decoded.data == 0 then return nil end
+	local ids = {}
+	for _, s in ipairs(decoded.data) do
+		if s.id and s.id ~= excludeId then
+			table.insert(ids, s.id)
 		end
 	end
-	return jobIds
+	if #ids == 0 then return nil end
+	return ids[math.random(1, #ids)]
 end
 
-local function populateList()
+local function checkAndShow()
 	clearEntries()
-	countLabel.Text = "Searching..."
-
-	task.spawn(function()
-		-- First check the server we're already in
-		local found = checkCurrentServer()
-
-		if #found > 0 then
-			for order, entry in ipairs(found) do
-				entryCount += 1
-				makeEntry(entry.name, entry.jobId, order)
-			end
-			countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
-		else
-			emptyLabel.Visible = true
-			countLabel.Text = "0 servers available"
+	countLabel.Text = "Checking..."
+	local brainrotsFolder = ReplicatedStorage:FindFirstChild("Brainrots")
+	if not brainrotsFolder then
+		emptyLabel.Visible = true
+		countLabel.Text = "0 found — hop to search"
+		return
+	end
+	local order = 0
+	for _, v in ipairs(brainrotsFolder:GetChildren()) do
+		if v:IsA("Folder") and WHITELIST[v.Name] then
+			order += 1
+			entryCount += 1
+			makeEntry(v.Name, game.JobId, order)
 		end
-	end)
+	end
+	if entryCount == 0 then
+		emptyLabel.Visible = true
+		countLabel.Text = "0 found — hop to search"
+	else
+		countLabel.Text = entryCount .. " found in this server"
+	end
 end
 
 refreshBtn.MouseButton1Click:Connect(function()
 	refreshBtn.Text = "..."
-	populateList()
-	task.wait(0.5)
+	checkAndShow()
+	task.wait(0.4)
 	refreshBtn.Text = "Refresh"
 end)
 
--- On load, check current server immediately
 task.spawn(function()
-	task.wait(2) -- wait for RS to replicate
-	populateList()
-end)
-
--- Auto re-check when teleported into a new server
-TeleportService.LocalPlayerArrivedFromTeleport:Connect(function()
 	task.wait(3)
-	populateList()
+	checkAndShow()
 end)
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
 end)
 
--- SERVER HOP button — fetches server list and jumps to a different server each time
 local hopBtn = Instance.new("TextButton")
 hopBtn.Size = UDim2.new(1, -20, 0, 36)
 hopBtn.Position = UDim2.new(0, 10, 1, -180)
@@ -539,27 +508,21 @@ end)
 hopBtn.MouseButton1Click:Connect(function()
 	if not hopBtn.Active then return end
 	hopBtn.Active = false
-	hopBtn.Text = "Finding server..."
+	hopBtn.Text = "Hopping..."
 	TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(40, 28, 90) }):Play()
-
 	task.spawn(function()
-		local jobIds = getServerJobIds(game.JobId)
-		if #jobIds > 0 then
-			-- Pick a random one from the list so we don't always go to the same server
-			local pick = jobIds[math.random(1, #jobIds)]
-			local ok, err = pcall(function()
+		local pick = getRandomJobId(game.JobId)
+		if pick then
+			pcall(function()
 				TeleportService:TeleportToPlaceInstance(game.PlaceId, pick, player)
 			end)
-			if not ok then
-				warn(err)
-				hopBtn.Text = "⚡  SERVER HOP"
-				TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
-				hopBtn.Active = true
-			end
 		else
-			-- No other servers found, fallback
 			pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
 		end
+		task.wait(5)
+		hopBtn.Text = "⚡  SERVER HOP"
+		TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
+		hopBtn.Active = true
 	end)
 end)
 
