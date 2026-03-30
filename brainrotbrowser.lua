@@ -237,6 +237,58 @@ end
 makeTeleportBtn("Teleport to Divine Area", -128, Color3.fromRGB(78, 48, 172), Color3.fromRGB(100, 65, 210), -3434.6, 1450.33, 7881.85)
 makeTeleportBtn("Teleport to Home", -76, Color3.fromRGB(38, 108, 158), Color3.fromRGB(52, 132, 188), -3392.6, 1449.33, -2911.57)
 
+-- SERVER HOP button
+local hopBtn = Instance.new("TextButton")
+hopBtn.Size = UDim2.new(1, -20, 0, 36)
+hopBtn.Position = UDim2.new(0, 10, 1, -180)
+hopBtn.BackgroundColor3 = Color3.fromRGB(55, 38, 110)
+hopBtn.TextColor3 = Color3.fromRGB(220, 200, 255)
+hopBtn.Text = "⚡  SERVER HOP"
+hopBtn.TextSize = 13
+hopBtn.Font = Enum.Font.GothamBold
+hopBtn.BorderSizePixel = 0
+hopBtn.AutoButtonColor = false
+hopBtn.Parent = frame
+Instance.new("UICorner", hopBtn).CornerRadius = UDim.new(0, 10)
+
+local hopStroke = Instance.new("UIStroke")
+hopStroke.Color = Color3.fromRGB(110, 75, 215)
+hopStroke.Thickness = 1.2
+hopStroke.Parent = hopBtn
+
+local hopGrad = Instance.new("UIGradient")
+hopGrad.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 55, 165)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 28, 90)),
+})
+hopGrad.Rotation = 90
+hopGrad.Parent = hopBtn
+
+hopBtn.MouseEnter:Connect(function()
+	TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(75, 52, 145) }):Play()
+end)
+hopBtn.MouseLeave:Connect(function()
+	TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
+end)
+
+hopBtn.MouseButton1Click:Connect(function()
+	if not hopBtn.Active then return end
+	hopBtn.Active = false
+	hopBtn.Text = "Hopping..."
+	TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(40, 28, 90) }):Play()
+	local ok, err = pcall(function()
+		TeleportService:Teleport(game.PlaceId, player)
+	end)
+	if not ok then
+		warn(err)
+		hopBtn.Text = "Failed"
+		task.wait(2)
+		hopBtn.Text = "⚡  SERVER HOP"
+		TweenService:Create(hopBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 38, 110) }):Play()
+		hopBtn.Active = true
+	end
+end)
+
 local miniBtn = Instance.new("TextButton")
 miniBtn.Size = MINI_SIZE
 miniBtn.Position = GUI_POS
@@ -330,13 +382,24 @@ local function clearEntries()
 	entryCount = 0
 end
 
--- Reads the JobId stored on a brainrot folder.
--- The game stores it as an attribute called "JobId" OR as a StringValue child called "JobId".
+-- Try every common way brainrot games store the JobId on a server folder
 local function getJobId(folder)
-	local attr = folder:GetAttribute("JobId")
-	if attr and attr ~= "" then return attr end
+	-- 1. Attribute named "JobId"
+	local a = folder:GetAttribute("JobId")
+	if a and a ~= "" then return a end
+	-- 2. StringValue child named "JobId"
 	local sv = folder:FindFirstChild("JobId")
 	if sv and sv:IsA("StringValue") and sv.Value ~= "" then return sv.Value end
+	-- 3. StringValue child named "Server"
+	local sv2 = folder:FindFirstChild("Server")
+	if sv2 and sv2:IsA("StringValue") and sv2.Value ~= "" then return sv2.Value end
+	-- 4. StringValue child named "Job"
+	local sv3 = folder:FindFirstChild("Job")
+	if sv3 and sv3:IsA("StringValue") and sv3.Value ~= "" then return sv3.Value end
+	-- 5. First StringValue child of any name (fallback)
+	for _, c in ipairs(folder:GetChildren()) do
+		if c:IsA("StringValue") and c.Value ~= "" then return c.Value end
+	end
 	return nil
 end
 
@@ -420,7 +483,6 @@ local function makeEntry(name, jobId, order)
 		btn.Text = "..."
 		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(50, 35, 120) }):Play()
 
-		-- Teleport to the specific server using its JobId
 		local ok, err = pcall(function()
 			TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
 		end)
@@ -443,13 +505,25 @@ local function populateList()
 	if folder then
 		local order = 0
 		for _, v in ipairs(folder:GetChildren()) do
-			-- Only show whitelisted brainrots that are actually present AND have a valid JobId
 			if v:IsA("Folder") and WHITELIST[v.Name] then
 				local jobId = getJobId(v)
 				if jobId then
 					order += 1
 					entryCount += 1
 					makeEntry(v.Name, jobId, order)
+				else
+					-- JobId not found yet, wait a moment and retry once (data may still be replicating)
+					task.spawn(function()
+						task.wait(2)
+						local retryJobId = getJobId(v)
+						if retryJobId and v.Parent == folder then
+							order += 1
+							entryCount += 1
+							makeEntry(v.Name, retryJobId, order)
+							emptyLabel.Visible = entryCount == 0
+							countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
+						end
+					end)
 				end
 			end
 		end
@@ -486,8 +560,8 @@ layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
 end)
 
--- Auto re-execute when teleported into a new server
+-- Auto re-run when teleported to a new server so the list refreshes immediately
 TeleportService.LocalPlayerArrivedFromTeleport:Connect(function()
-	task.wait(2) -- wait for ReplicatedStorage to populate
+	task.wait(3)
 	populateList()
 end)
