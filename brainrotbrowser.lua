@@ -18,7 +18,6 @@ local function instantPrompts()
 			v.HoldDuration = 0
 		end
 	end
-
 	workspace.DescendantAdded:Connect(function(v)
 		if v:IsA("ProximityPrompt") then
 			v.HoldDuration = 0
@@ -28,27 +27,49 @@ end
 
 instantPrompts()
 
-local function watchPickup()
-	local zone = workspace:WaitForChild("ItemSpawns")
+local function isValidPrompt(prompt)
+	local p = prompt.Parent
+	if not p then return false end
 
-	local function hook(item)
-		if item.Name == "SpawnedItem" then
-			item.AncestryChanged:Connect(function(_, parent)
-				if not parent then
-					tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
-				end
-			end)
-		end
-	end
+	if not p:IsA("BasePart") then return false end
 
-	for _, v in pairs(zone:GetDescendants()) do
-		hook(v)
-	end
+	local spawned = p:FindFirstAncestor("SpawnedItem")
+	if not spawned then return false end
 
-	zone.DescendantAdded:Connect(hook)
+	local slot = spawned.Parent
+	if not slot then return false end
+
+	if slot.Parent ~= workspace:FindFirstChild("ItemSpawns") then return false end
+
+	local num = tonumber(slot.Name)
+	if not num then return false end
+	if num < 1 or num > 10 then return false end
+
+	return true
 end
 
-task.spawn(watchPickup)
+local function hook(prompt)
+	if not prompt:IsA("ProximityPrompt") then return end
+	if not isValidPrompt(prompt) then return end
+
+	prompt.Triggered:Connect(function(plr)
+		if plr == player then
+			tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
+		end
+	end)
+end
+
+for _, v in pairs(workspace:GetDescendants()) do
+	if v:IsA("ProximityPrompt") then
+		hook(v)
+	end
+end
+
+workspace.DescendantAdded:Connect(function(v)
+	if v:IsA("ProximityPrompt") then
+		hook(v)
+	end
+end)
 
 local function getServer()
 	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
