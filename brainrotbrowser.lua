@@ -11,6 +11,10 @@ local WHITELIST = {
 	["Dragon Cannelloni"] = true,
 }
 
+local GUI_SIZE = UDim2.new(0, 370, 0, 500)
+local GUI_POS = UDim2.new(0, 20, 0, 20)
+local MINI_SIZE = UDim2.new(0, 46, 0, 46)
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "BrainrotBrowser"
 gui.ResetOnSpawn = false
@@ -18,120 +22,136 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 360, 0, 420)
-frame.Position = UDim2.new(0.5, -180, 0.5, -210)
-frame.BackgroundColor3 = Color3.fromRGB(12, 11, 22)
+frame.Size = GUI_SIZE
+frame.Position = GUI_POS
+frame.BackgroundColor3 = Color3.fromRGB(10, 9, 20)
 frame.BorderSizePixel = 0
 frame.ClipsDescendants = true
 frame.Parent = gui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(90, 60, 180)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.4
-stroke.Parent = frame
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Color3.fromRGB(100, 65, 200)
+frameStroke.Thickness = 1.5
+frameStroke.Transparency = 0.3
+frameStroke.Parent = frame
 
-local gradient = Instance.new("UIGradient")
-gradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 18, 42)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 9, 20)),
+local frameBG = Instance.new("UIGradient")
+frameBG.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 16, 40)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 7, 18)),
 })
-gradient.Rotation = 135
-gradient.Parent = frame
+frameBG.Rotation = 145
+frameBG.Parent = frame
+
+local topGlow = Instance.new("Frame")
+topGlow.Size = UDim2.new(1, 0, 0, 2)
+topGlow.BackgroundColor3 = Color3.fromRGB(130, 90, 255)
+topGlow.BorderSizePixel = 0
+topGlow.BackgroundTransparency = 0.3
+topGlow.Parent = frame
+
+local topGlowGrad = Instance.new("UIGradient")
+topGlowGrad.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+	ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255,255,255)),
+	ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255,255,255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0)),
+})
+topGlowGrad.Parent = topGlow
 
 local titlebar = Instance.new("Frame")
-titlebar.Size = UDim2.new(1, 0, 0, 52)
-titlebar.BackgroundColor3 = Color3.fromRGB(28, 22, 55)
+titlebar.Size = UDim2.new(1, 0, 0, 54)
+titlebar.BackgroundColor3 = Color3.fromRGB(24, 18, 50)
 titlebar.BorderSizePixel = 0
 titlebar.ZIndex = 2
 titlebar.Parent = frame
-Instance.new("UICorner", titlebar).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", titlebar).CornerRadius = UDim.new(0, 18)
 
-local titlebarfix = Instance.new("Frame")
-titlebarfix.Size = UDim2.new(1, 0, 0.5, 0)
-titlebarfix.Position = UDim2.new(0, 0, 0.5, 0)
-titlebarfix.BackgroundColor3 = titlebar.BackgroundColor3
-titlebarfix.BorderSizePixel = 0
-titlebarfix.ZIndex = 2
-titlebarfix.Parent = titlebar
+local titlebarFix = Instance.new("Frame")
+titlebarFix.Size = UDim2.new(1, 0, 0.5, 0)
+titlebarFix.Position = UDim2.new(0, 0, 0.5, 0)
+titlebarFix.BackgroundColor3 = titlebar.BackgroundColor3
+titlebarFix.BorderSizePixel = 0
+titlebarFix.ZIndex = 2
+titlebarFix.Parent = titlebar
 
-local titleglow = Instance.new("UIGradient")
-titleglow.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 35, 90)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(22, 18, 55)),
+local titleGrad = Instance.new("UIGradient")
+titleGrad.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 30, 85)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 14, 42)),
 })
-titleglow.Rotation = 90
-titleglow.Parent = titlebar
+titleGrad.Rotation = 90
+titleGrad.Parent = titlebar
 
-local titleicon = Instance.new("TextLabel")
-titleicon.Size = UDim2.new(0, 30, 1, 0)
-titleicon.Position = UDim2.new(0, 14, 0, 0)
-titleicon.BackgroundTransparency = 1
-titleicon.Text = "🧠"
-titleicon.TextSize = 20
-titleicon.Font = Enum.Font.GothamBold
-titleicon.ZIndex = 3
-titleicon.Parent = titlebar
+local titleIcon = Instance.new("TextLabel")
+titleIcon.Size = UDim2.new(0, 32, 1, 0)
+titleIcon.Position = UDim2.new(0, 14, 0, 0)
+titleIcon.BackgroundTransparency = 1
+titleIcon.Text = "🧠"
+titleIcon.TextSize = 22
+titleIcon.Font = Enum.Font.GothamBold
+titleIcon.ZIndex = 3
+titleIcon.Parent = titlebar
 
-local titlelabel = Instance.new("TextLabel")
-titlelabel.Size = UDim2.new(1, -100, 1, 0)
-titlelabel.Position = UDim2.new(0, 48, 0, 0)
-titlelabel.BackgroundTransparency = 1
-titlelabel.Text = "Brainrot Servers"
-titlelabel.TextColor3 = Color3.fromRGB(215, 205, 255)
-titlelabel.TextSize = 17
-titlelabel.Font = Enum.Font.GothamBold
-titlelabel.TextXAlignment = Enum.TextXAlignment.Left
-titlelabel.ZIndex = 3
-titlelabel.Parent = titlebar
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -110, 1, 0)
+titleLabel.Position = UDim2.new(0, 50, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Brainrot Servers"
+titleLabel.TextColor3 = Color3.fromRGB(220, 210, 255)
+titleLabel.TextSize = 17
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.ZIndex = 3
+titleLabel.Parent = titlebar
 
-local closebtn = Instance.new("TextButton")
-closebtn.Size = UDim2.new(0, 30, 0, 30)
-closebtn.Position = UDim2.new(1, -40, 0.5, -15)
-closebtn.BackgroundColor3 = Color3.fromRGB(180, 50, 80)
-closebtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closebtn.Text = "✕"
-closebtn.TextSize = 13
-closebtn.Font = Enum.Font.GothamBold
-closebtn.BorderSizePixel = 0
-closebtn.AutoButtonColor = false
-closebtn.ZIndex = 4
-closebtn.Parent = titlebar
-Instance.new("UICorner", closebtn).CornerRadius = UDim.new(0, 8)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
+closeBtn.Position = UDim2.new(1, -38, 0.5, -14)
+closeBtn.BackgroundColor3 = Color3.fromRGB(170, 45, 70)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Text = "X"
+closeBtn.TextSize = 12
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.BorderSizePixel = 0
+closeBtn.AutoButtonColor = false
+closeBtn.ZIndex = 4
+closeBtn.Parent = titlebar
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
-closebtn.MouseEnter:Connect(function()
-	TweenService:Create(closebtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 70, 100) }):Play()
+closeBtn.MouseEnter:Connect(function()
+	TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(215, 65, 95) }):Play()
 end)
-closebtn.MouseLeave:Connect(function()
-	TweenService:Create(closebtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(180, 50, 80) }):Play()
+closeBtn.MouseLeave:Connect(function()
+	TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(170, 45, 70) }):Play()
 end)
 
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(1, -30, 0, 1)
-divider.Position = UDim2.new(0, 15, 0, 58)
-divider.BackgroundColor3 = Color3.fromRGB(70, 50, 130)
+divider.Position = UDim2.new(0, 15, 0, 60)
+divider.BackgroundColor3 = Color3.fromRGB(80, 55, 145)
 divider.BorderSizePixel = 0
 divider.BackgroundTransparency = 0.5
 divider.Parent = frame
 
-local countlabel = Instance.new("TextLabel")
-countlabel.Size = UDim2.new(1, -30, 0, 20)
-countlabel.Position = UDim2.new(0, 15, 0, 66)
-countlabel.BackgroundTransparency = 1
-countlabel.TextColor3 = Color3.fromRGB(120, 105, 175)
-countlabel.TextSize = 12
-countlabel.Font = Enum.Font.Gotham
-countlabel.TextXAlignment = Enum.TextXAlignment.Left
-countlabel.Parent = frame
+local countLabel = Instance.new("TextLabel")
+countLabel.Size = UDim2.new(1, -30, 0, 22)
+countLabel.Position = UDim2.new(0, 15, 0, 67)
+countLabel.BackgroundTransparency = 1
+countLabel.TextColor3 = Color3.fromRGB(110, 95, 165)
+countLabel.TextSize = 12
+countLabel.Font = Enum.Font.Gotham
+countLabel.TextXAlignment = Enum.TextXAlignment.Left
+countLabel.Parent = frame
 
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 1, -100)
-scroll.Position = UDim2.new(0, 10, 0, 92)
+scroll.Size = UDim2.new(1, -20, 1, -235)
+scroll.Position = UDim2.new(0, 10, 0, 94)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 3
-scroll.ScrollBarImageColor3 = Color3.fromRGB(110, 80, 210)
+scroll.ScrollBarImageColor3 = Color3.fromRGB(110, 75, 215)
 scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 scroll.Parent = frame
 
@@ -140,18 +160,63 @@ layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = scroll
 
-local lpadding = Instance.new("UIPadding")
-lpadding.PaddingTop = UDim.new(0, 4)
-lpadding.PaddingBottom = UDim.new(0, 8)
-lpadding.Parent = scroll
+local lpad = Instance.new("UIPadding")
+lpad.PaddingTop = UDim.new(0, 4)
+lpad.PaddingBottom = UDim.new(0, 8)
+lpad.Parent = scroll
+
+local bottomDivider = Instance.new("Frame")
+bottomDivider.Size = UDim2.new(1, -30, 0, 1)
+bottomDivider.Position = UDim2.new(0, 15, 1, -138)
+bottomDivider.BackgroundColor3 = Color3.fromRGB(80, 55, 145)
+bottomDivider.BorderSizePixel = 0
+bottomDivider.BackgroundTransparency = 0.5
+bottomDivider.Parent = frame
+
+local function makeTeleportBtn(text, yOff, bg, hover, x, y, z)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -20, 0, 44)
+	btn.Position = UDim2.new(0, 10, 1, yOff)
+	btn.BackgroundColor3 = bg
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Text = text
+	btn.TextSize = 13
+	btn.Font = Enum.Font.GothamBold
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.Parent = frame
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = hover }):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = bg }):Play()
+	end)
+
+	btn.MouseButton1Click:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.08), { Size = UDim2.new(1, -28, 0, 40) }):Play()
+		task.wait(0.09)
+		TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(1, -20, 0, 44) }):Play()
+		local char = player.Character
+		if not char then return end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = CFrame.new(x, y, z)
+		end
+	end)
+end
+
+makeTeleportBtn("✦  Teleport to Divine Area", -128, Color3.fromRGB(78, 48, 172), Color3.fromRGB(100, 65, 210), -3434.6, 1450.33, 7881.85)
+makeTeleportBtn("⌂  Teleport to Home", -76, Color3.fromRGB(38, 108, 158), Color3.fromRGB(52, 132, 188), -3392.6, 1449.33, -2911.57)
 
 local miniBtn = Instance.new("TextButton")
-miniBtn.Size = UDim2.new(0, 46, 0, 46)
-miniBtn.Position = UDim2.new(0.5, -23, 0.5, -23)
-miniBtn.BackgroundColor3 = Color3.fromRGB(28, 22, 55)
-miniBtn.TextColor3 = Color3.fromRGB(215, 205, 255)
+miniBtn.Size = MINI_SIZE
+miniBtn.Position = GUI_POS
+miniBtn.BackgroundColor3 = Color3.fromRGB(24, 18, 50)
+miniBtn.TextColor3 = Color3.fromRGB(220, 210, 255)
 miniBtn.Text = "🧠"
-miniBtn.TextSize = 22
+miniBtn.TextSize = 20
 miniBtn.Font = Enum.Font.GothamBold
 miniBtn.BorderSizePixel = 0
 miniBtn.AutoButtonColor = false
@@ -161,15 +226,15 @@ miniBtn.Parent = gui
 Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1, 0)
 
 local miniStroke = Instance.new("UIStroke")
-miniStroke.Color = Color3.fromRGB(100, 70, 200)
+miniStroke.Color = Color3.fromRGB(110, 75, 215)
 miniStroke.Thickness = 2
 miniStroke.Parent = miniBtn
 
 miniBtn.MouseEnter:Connect(function()
-	TweenService:Create(miniBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(45, 35, 85) }):Play()
+	TweenService:Create(miniBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(40, 30, 80) }):Play()
 end)
 miniBtn.MouseLeave:Connect(function()
-	TweenService:Create(miniBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 22, 55) }):Play()
+	TweenService:Create(miniBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(24, 18, 50) }):Play()
 end)
 
 local function makeDraggable(dragTarget, moveTarget)
@@ -200,21 +265,27 @@ end
 makeDraggable(titlebar, frame)
 makeDraggable(miniBtn, miniBtn)
 
-closebtn.MouseButton1Click:Connect(function()
-	TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {
-		Size = UDim2.new(0, 360, 0, 0),
+closeBtn.MouseButton1Click:Connect(function()
+	local snapPos = UDim2.new(frame.Position.X.Scale, frame.Position.X.Offset, frame.Position.Y.Scale, frame.Position.Y.Offset)
+	TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
+		Size = UDim2.new(0, 46, 0, 46),
+		Position = snapPos,
 	}):Play()
-	task.wait(0.25)
+	task.wait(0.36)
 	frame.Visible = false
+	miniBtn.Position = snapPos
 	miniBtn.Visible = true
 end)
 
 miniBtn.MouseButton1Click:Connect(function()
+	local fromPos = miniBtn.Position
 	miniBtn.Visible = false
 	frame.Visible = true
-	frame.Size = UDim2.new(0, 360, 0, 0)
-	TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0, 360, 0, 420),
+	frame.Size = UDim2.new(0, 46, 0, 46)
+	frame.Position = fromPos
+	TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Size = GUI_SIZE,
+		Position = GUI_POS,
 	}):Play()
 end)
 
@@ -222,8 +293,8 @@ local entryCount = 0
 
 local function makeEntry(name, order)
 	local card = Instance.new("Frame")
-	card.Size = UDim2.new(1, 0, 0, 60)
-	card.BackgroundColor3 = Color3.fromRGB(22, 18, 42)
+	card.Size = UDim2.new(1, 0, 0, 58)
+	card.BackgroundColor3 = Color3.fromRGB(20, 16, 38)
 	card.BorderSizePixel = 0
 	card.LayoutOrder = order
 	card.BackgroundTransparency = 1
@@ -231,36 +302,36 @@ local function makeEntry(name, order)
 	Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
 
 	local cardStroke = Instance.new("UIStroke")
-	cardStroke.Color = Color3.fromRGB(70, 50, 130)
+	cardStroke.Color = Color3.fromRGB(65, 45, 120)
 	cardStroke.Thickness = 1
-	cardStroke.Transparency = 0.6
+	cardStroke.Transparency = 0.55
 	cardStroke.Parent = card
 
-	TweenService:Create(card, TweenInfo.new(0.3, Enum.EasingStyle.Quint), { BackgroundTransparency = 0 }):Play()
+	TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { BackgroundTransparency = 0 }):Play()
 
 	local accent = Instance.new("Frame")
-	accent.Size = UDim2.new(0, 3, 0.55, 0)
-	accent.Position = UDim2.new(0, 0, 0.225, 0)
-	accent.BackgroundColor3 = Color3.fromRGB(120, 80, 230)
+	accent.Size = UDim2.new(0, 3, 0.5, 0)
+	accent.Position = UDim2.new(0, 0, 0.25, 0)
+	accent.BackgroundColor3 = Color3.fromRGB(125, 82, 238)
 	accent.BorderSizePixel = 0
 	accent.Parent = card
 	Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -110, 1, 0)
+	label.Size = UDim2.new(1, -115, 1, 0)
 	label.Position = UDim2.new(0, 16, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = name
-	label.TextColor3 = Color3.fromRGB(220, 212, 255)
+	label.TextColor3 = Color3.fromRGB(218, 210, 255)
 	label.TextSize = 14
 	label.Font = Enum.Font.GothamSemibold
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = card
 
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 76, 0, 34)
-	btn.Position = UDim2.new(1, -86, 0.5, -17)
-	btn.BackgroundColor3 = Color3.fromRGB(95, 65, 215)
+	btn.Size = UDim2.new(0, 74, 0, 32)
+	btn.Position = UDim2.new(1, -84, 0.5, -16)
+	btn.BackgroundColor3 = Color3.fromRGB(92, 62, 210)
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	btn.Text = "Join"
 	btn.TextSize = 13
@@ -272,41 +343,33 @@ local function makeEntry(name, order)
 
 	local btnGrad = Instance.new("UIGradient")
 	btnGrad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 85, 240)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 50, 190)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(118, 82, 238)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(72, 48, 185)),
 	})
 	btnGrad.Rotation = 90
 	btnGrad.Parent = btn
 
 	btn.MouseEnter:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(115, 85, 235) }):Play()
-		TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(30, 25, 52) }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(112, 80, 232) }):Play()
+		TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 22, 50) }):Play()
+		TweenService:Create(cardStroke, TweenInfo.new(0.15), { Transparency = 0.2 }):Play()
 	end)
 	btn.MouseLeave:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(95, 65, 215) }):Play()
-		TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(22, 18, 42) }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(92, 62, 210) }):Play()
+		TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(20, 16, 38) }):Play()
+		TweenService:Create(cardStroke, TweenInfo.new(0.15), { Transparency = 0.55 }):Play()
 	end)
 
 	btn.MouseButton1Click:Connect(function()
 		if not btn.Active then return end
 		btn.Active = false
 
-		TweenService:Create(btn, TweenInfo.new(0.1), { Size = UDim2.new(0, 68, 0, 30) }):Play()
-		task.wait(0.1)
-		TweenService:Create(btn, TweenInfo.new(0.1), { Size = UDim2.new(0, 76, 0, 34) }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.08), { Size = UDim2.new(0, 66, 0, 28) }):Play()
+		task.wait(0.09)
+		TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 74, 0, 32) }):Play()
 
 		btn.Text = "..."
-		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(55, 40, 130) }):Play()
-
-		local brainrotsFolder = ReplicatedStorage:FindFirstChild("Brainrots")
-		if not brainrotsFolder then
-			btn.Text = "Error"
-			task.wait(2)
-			btn.Text = "Join"
-			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(95, 65, 215) }):Play()
-			btn.Active = true
-			return
-		end
+		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(50, 35, 120) }):Play()
 
 		local opts = Instance.new("TeleportOptions")
 		opts:SetTeleportData({ brainrot = name })
@@ -317,11 +380,11 @@ local function makeEntry(name, order)
 
 		if not ok then
 			warn(err)
-			btn.Text = "Retry"
-			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(160, 50, 70) }):Play()
-			task.wait(2)
+			btn.Text = "Failed"
+			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(155, 45, 65) }):Play()
+			task.wait(2.5)
 			btn.Text = "Join"
-			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(95, 65, 215) }):Play()
+			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(92, 62, 210) }):Play()
 			btn.Active = true
 		end
 	end)
@@ -338,13 +401,13 @@ if folder then
 	folder.ChildAdded:Connect(function(v)
 		if v:IsA("Folder") and WHITELIST[v.Name] then
 			entryCount += 1
-			countlabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
+			countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
 			makeEntry(v.Name, #folder:GetChildren())
 		end
 	end)
 end
 
-countlabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
+countLabel.Text = entryCount .. " server" .. (entryCount == 1 and "" or "s") .. " available"
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
