@@ -50,21 +50,6 @@ frameBG.Color = ColorSequence.new({
 frameBG.Rotation = 145
 frameBG.Parent = frame
 
-local topGlow = Instance.new("Frame")
-topGlow.Size = UDim2.new(1, 0, 0, 2)
-topGlow.BackgroundColor3 = Color3.fromRGB(130, 90, 255)
-topGlow.BorderSizePixel = 0
-topGlow.BackgroundTransparency = 0.3
-topGlow.Parent = frame
-
-local topGlowGrad = Instance.new("UIGradient")
-topGlowGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
-	ColorSequenceKeypoint.new(0.3, Color3.fromRGB(255,255,255)),
-	ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255,255,255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0)),
-})
-topGlowGrad.Parent = topGlow
 
 local titlebar = Instance.new("Frame")
 titlebar.Size = UDim2.new(1, 0, 0, 54)
@@ -345,7 +330,7 @@ local function clearEntries()
 	entryCount = 0
 end
 
-local function makeEntry(name, order)
+local function makeEntry(name, jobId, order)
 	local card = Instance.new("Frame")
 	card.Size = UDim2.new(1, 0, 0, 58)
 	card.BackgroundColor3 = Color3.fromRGB(20, 16, 38)
@@ -425,9 +410,8 @@ local function makeEntry(name, order)
 		btn.Text = "..."
 		TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(50, 35, 120) }):Play()
 
-		-- Fixed: TeleportAsync can't be called from a LocalScript, use Teleport instead
 		local ok, err = pcall(function()
-			TeleportService:Teleport(game.PlaceId, player)
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
 		end)
 
 		if not ok then
@@ -451,7 +435,7 @@ local function populateList()
 			if v:IsA("Folder") and WHITELIST[v.Name] then
 				order += 1
 				entryCount += 1
-				makeEntry(v.Name, order)
+				makeEntry(v.Name, v.Name, order)
 			end
 		end
 	end
