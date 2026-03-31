@@ -21,7 +21,7 @@ task.spawn(function()
 		local hrp = getHRP()
 		if (hrp.Position - divineCF.Position).Magnitude < 10 then break end
 		hrp.CFrame = divineCF
-		task.wait(0.25)
+		task.wait(0.3)
 	end
 end)
 
@@ -40,7 +40,7 @@ end
 
 instantPrompts()
 
-local function getSpawnedItem10()
+local function getItem10()
 	local zone = workspace:FindFirstChild("ItemSpawns")
 	if not zone then return end
 	local slot = zone:FindFirstChild("10")
@@ -62,23 +62,19 @@ end
 
 local pickedConn
 
-local function handleItem(item)
-	tpToItem(item)
-
-	if pickedConn then pickedConn:Disconnect() end
-
-	pickedConn = item.AncestryChanged:Connect(function(_, parent)
-		if not parent then
-			tp(homeCF)
-		end
-	end)
-end
-
 task.spawn(function()
 	while true do
-		local item = getSpawnedItem10()
+		local item = getItem10()
 		if item then
-			handleItem(item)
+			tpToItem(item)
+
+			if pickedConn then pickedConn:Disconnect() end
+			pickedConn = item.AncestryChanged:Connect(function(_, parent)
+				if not parent then
+					tp(homeCF)
+				end
+			end)
+
 			break
 		end
 		task.wait(0.2)
@@ -107,32 +103,19 @@ local function getServer()
 	end
 end
 
-local hopping = false
+local function hasItem10()
+	local zone = workspace:FindFirstChild("ItemSpawns")
+	if not zone then return false end
+	local slot = zone:FindFirstChild("10")
+	if not slot then return false end
 
-local function serverHopPlus()
-	if hopping then return end
-	hopping = true
-
-	while true do
-		local start = tick()
-
-		repeat
-			if getSpawnedItem10() then
-				hopping = false
-				return
-			end
-			task.wait(0.2)
-		until tick() - start > 3
-
-		local id = getServer()
-		if id then
-			TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-		else
-			TeleportService:Teleport(game.PlaceId, player)
+	for _,v in ipairs(slot:GetChildren()) do
+		if v.Name == "SpawnedItem" then
+			return true
 		end
-
-		task.wait(1)
 	end
+
+	return false
 end
 
 local gui = Instance.new("ScreenGui")
@@ -160,29 +143,29 @@ task.spawn(function()
 	end
 end)
 
-local function btn(t,y,c,f)
+local function makeBtn(text, y, color, callback)
 	local b = Instance.new("TextButton")
 	b.Size = UDim2.new(1,-20,0,40)
 	b.Position = UDim2.new(0,10,0,y)
-	b.BackgroundColor3 = c
-	b.Text = t
+	b.BackgroundColor3 = color
+	b.Text = text
 	b.TextColor3 = Color3.new(1,1,1)
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 14
 	b.Parent = frame
-	Instance.new("UICorner",b)
-	b.MouseButton1Click:Connect(f)
+	Instance.new("UICorner", b)
+	b.MouseButton1Click:Connect(callback)
 end
 
-btn("Teleport to Divine",10,Color3.fromRGB(140,90,255),function()
+makeBtn("Teleport to Divine",10,Color3.fromRGB(140,90,255),function()
 	tp(divineCF)
 end)
 
-btn("Teleport to Home",60,Color3.fromRGB(80,170,255),function()
+makeBtn("Teleport to Home",60,Color3.fromRGB(80,170,255),function()
 	tp(homeCF)
 end)
 
-btn("Server Hop",110,Color3.fromRGB(255,100,120),function()
+makeBtn("Server Hop",110,Color3.fromRGB(255,100,120),function()
 	local id = getServer()
 	if id then
 		TeleportService:TeleportToPlaceInstance(game.PlaceId,id,player)
@@ -191,6 +174,19 @@ btn("Server Hop",110,Color3.fromRGB(255,100,120),function()
 	end
 end)
 
-btn("Server Hop++",160,Color3.fromRGB(120,255,180),function()
-	task.spawn(serverHopPlus)
+makeBtn("Server Hop++",160,Color3.fromRGB(120,255,180),function()
+	task.spawn(function()
+		while true do
+			if hasItem10() then break end
+
+			local id = getServer()
+			if id then
+				TeleportService:TeleportToPlaceInstance(game.PlaceId,id,player)
+			else
+				TeleportService:Teleport(game.PlaceId,player)
+			end
+
+			task.wait(1)
+		end
+	end)
 end)
