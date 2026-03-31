@@ -27,53 +27,6 @@ end
 
 instantPrompts()
 
--- 🔥 THIS IS THE ONLY THING ADDED (your old working system)
-
-local function isValidPrompt(prompt)
-	local p = prompt.Parent
-	if not p then return false end
-	if not p:IsA("BasePart") then return false end
-
-	local spawned = p:FindFirstAncestor("SpawnedItem")
-	if not spawned then return false end
-
-	local slot = spawned.Parent
-	if not slot then return false end
-
-	if slot.Parent ~= workspace:FindFirstChild("ItemSpawns") then return false end
-
-	local num = tonumber(slot.Name)
-	if not num then return false end
-	if num < 1 or num > 10 then return false end
-
-	return true
-end
-
-local function hook(prompt)
-	if not prompt:IsA("ProximityPrompt") then return end
-	if not isValidPrompt(prompt) then return end
-
-	prompt.Triggered:Connect(function(plr)
-		if plr == player then
-			tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
-		end
-	end)
-end
-
-for _, v in pairs(workspace:GetDescendants()) do
-	if v:IsA("ProximityPrompt") then
-		hook(v)
-	end
-end
-
-workspace.DescendantAdded:Connect(function(v)
-	if v:IsA("ProximityPrompt") then
-		hook(v)
-	end
-end)
-
--- 🔼 NOTHING ELSE CHANGED BELOW
-
 local function hasItem10()
 	local zone = workspace:FindFirstChild("ItemSpawns")
 	if not zone then return false end
