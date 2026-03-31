@@ -27,13 +27,39 @@ end
 
 instantPrompts()
 
-local function hasItem10()
+local function getItem10()
 	local zone = workspace:FindFirstChild("ItemSpawns")
-	if not zone then return false end
+	if not zone then return end
 	local slot = zone:FindFirstChild("10")
-	if not slot then return false end
-	return slot:FindFirstChild("SpawnedItem") ~= nil
+	if not slot then return end
+	return slot:FindFirstChild("SpawnedItem")
 end
+
+local function tpToItem()
+	local item = getItem10()
+	if not item then return end
+	local part = item:FindFirstChildWhichIsA("BasePart", true)
+	if part then
+		tpTo(part.CFrame + Vector3.new(0,5,0))
+	end
+end
+
+local function watchPickup()
+	while true do
+		local item = getItem10()
+		if item then
+			item.AncestryChanged:Connect(function(_, parent)
+				if not parent then
+					tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
+				end
+			end)
+			break
+		end
+		task.wait(0.5)
+	end
+end
+
+task.spawn(watchPickup)
 
 local function getServer()
 	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -56,18 +82,6 @@ local function getServer()
 		end
 	end
 end
-
-task.spawn(function()
-	if hasItem10() then return end
-	task.wait(2)
-	if hasItem10() then return end
-	local id = getServer()
-	if id then
-		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-	else
-		TeleportService:Teleport(game.PlaceId, player)
-	end
-end)
 
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
@@ -129,17 +143,18 @@ end)
 makeBtn("Server Hop++", 160, Color3.fromRGB(120, 255, 180), function()
 	task.spawn(function()
 		while true do
-			if hasItem10() then
+			local item = getItem10()
+			if item then
+				tpToItem()
 				break
 			end
-			task.wait(2)
 			local id = getServer()
 			if id then
 				TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
 			else
 				TeleportService:Teleport(game.PlaceId, player)
 			end
-			task.wait(3)
+			task.wait(1.5)
 		end
 	end)
 end)
