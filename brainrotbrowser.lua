@@ -176,17 +176,32 @@ end)
 
 makeBtn("Server Hop++",160,Color3.fromRGB(120,255,180),function()
 	task.spawn(function()
-		while true do
-			if hasItem10() then break end
+		local start = tick()
+		local found = false
 
+		repeat
+			local zone = workspace:FindFirstChild("ItemSpawns")
+			if zone then
+				local slot = zone:FindFirstChild("10")
+				if slot then
+					for _,v in ipairs(slot:GetChildren()) do
+						if v.Name == "SpawnedItem" then
+							found = true
+							break
+						end
+					end
+				end
+			end
+			task.wait(0.3)
+		until found or tick() - start > 4
+
+		if not found then
 			local id = getServer()
 			if id then
 				TeleportService:TeleportToPlaceInstance(game.PlaceId,id,player)
 			else
 				TeleportService:Teleport(game.PlaceId,player)
 			end
-
-			task.wait(1)
 		end
 	end)
 end)
