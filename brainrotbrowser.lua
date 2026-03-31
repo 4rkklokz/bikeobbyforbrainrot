@@ -27,49 +27,6 @@ end
 
 instantPrompts()
 
-local function isValidPrompt(prompt)
-	local p = prompt.Parent
-	if not p then return false end
-	if not p:IsA("BasePart") then return false end
-
-	local spawned = p:FindFirstAncestor("SpawnedItem")
-	if not spawned then return false end
-
-	local slot = spawned.Parent
-	if not slot then return false end
-
-	if slot.Parent ~= workspace:FindFirstChild("ItemSpawns") then return false end
-
-	local num = tonumber(slot.Name)
-	if not num then return false end
-	if num < 1 or num > 10 then return false end
-
-	return true
-end
-
-local function hook(prompt)
-	if not prompt:IsA("ProximityPrompt") then return end
-	if not isValidPrompt(prompt) then return end
-
-	prompt.Triggered:Connect(function(plr)
-		if plr == player then
-			tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
-		end
-	end)
-end
-
-for _, v in pairs(workspace:GetDescendants()) do
-	if v:IsA("ProximityPrompt") then
-		hook(v)
-	end
-end
-
-workspace.DescendantAdded:Connect(function(v)
-	if v:IsA("ProximityPrompt") then
-		hook(v)
-	end
-end)
-
 local function hasItem10()
 	local zone = workspace:FindFirstChild("ItemSpawns")
 	if not zone then return false end
@@ -99,6 +56,18 @@ local function getServer()
 		end
 	end
 end
+
+task.spawn(function()
+	if hasItem10() then return end
+	task.wait(2)
+	if hasItem10() then return end
+	local id = getServer()
+	if id then
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+	else
+		TeleportService:Teleport(game.PlaceId, player)
+	end
+end)
 
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
