@@ -10,7 +10,18 @@ local function tpTo(cf)
 	hrp.CFrame = cf
 end
 
-tpTo(CFrame.new(-3434.6,1450.33,7881.85))
+local divineCF = CFrame.new(-3434.6,1450.33,7881.85)
+local homeCF = CFrame.new(-3392.6,1449.33,-2911.57)
+
+task.spawn(function()
+	while true do
+		tpTo(divineCF)
+		task.wait(0.5)
+		if (player.Character.HumanoidRootPart.Position - divineCF.Position).Magnitude < 10 then
+			break
+		end
+	end
+end)
 
 local function instantPrompts()
 	for _, v in pairs(workspace:GetDescendants()) do
@@ -32,34 +43,36 @@ local function getItem10()
 	if not zone then return end
 	local slot = zone:FindFirstChild("10")
 	if not slot then return end
-	return slot:FindFirstChild("SpawnedItem")
+	return slot
 end
 
-local function tpToItem()
-	local item = getItem10()
-	if not item then return end
-	local part = item:FindFirstChildWhichIsA("BasePart", true)
-	if part then
-		tpTo(part.CFrame + Vector3.new(0,5,0))
-	end
-end
+local picked = false
 
-local function watchPickup()
+task.spawn(function()
 	while true do
-		local item = getItem10()
-		if item then
-			item.AncestryChanged:Connect(function(_, parent)
-				if not parent then
-					tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
-				end
-			end)
-			break
-		end
-		task.wait(0.5)
-	end
-end
+		local slot = getItem10()
+		if slot then
+			for _, item in pairs(slot:GetChildren()) do
+				if item.Name == "SpawnedItem" then
+					local part = item:FindFirstChildWhichIsA("BasePart", true)
+					if part then
+						tpTo(part.CFrame + Vector3.new(0,5,0))
 
-task.spawn(watchPickup)
+						if not picked then
+							picked = true
+							item.AncestryChanged:Connect(function(_, parent)
+								if not parent then
+									tpTo(homeCF)
+								end
+							end)
+						end
+					end
+				end
+			end
+		end
+		task.wait(0.3)
+	end
+end)
 
 local function getServer()
 	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -124,11 +137,11 @@ local function makeBtn(text, y, color, callback)
 end
 
 makeBtn("Teleport to Divine", 10, Color3.fromRGB(140, 90, 255), function()
-	tpTo(CFrame.new(-3434.6,1450.33,7881.85))
+	tpTo(divineCF)
 end)
 
 makeBtn("Teleport to Home", 60, Color3.fromRGB(80, 170, 255), function()
-	tpTo(CFrame.new(-3392.6,1449.33,-2911.57))
+	tpTo(homeCF)
 end)
 
 makeBtn("Server Hop", 110, Color3.fromRGB(255, 100, 120), function()
@@ -143,9 +156,8 @@ end)
 makeBtn("Server Hop++", 160, Color3.fromRGB(120, 255, 180), function()
 	task.spawn(function()
 		while true do
-			local item = getItem10()
-			if item then
-				tpToItem()
+			local slot = getItem10()
+			if slot and #slot:GetChildren() > 0 then
 				break
 			end
 			local id = getServer()
@@ -154,7 +166,7 @@ makeBtn("Server Hop++", 160, Color3.fromRGB(120, 255, 180), function()
 			else
 				TeleportService:Teleport(game.PlaceId, player)
 			end
-			task.wait(1.5)
+			task.wait(1)
 		end
 	end)
 end)
