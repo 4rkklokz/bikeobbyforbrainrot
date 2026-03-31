@@ -4,27 +4,29 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
-local function tpTo(cf)
-	local c = player.Character or player.CharacterAdded:Wait()
-	local hrp = c:WaitForChild("HumanoidRootPart")
-	hrp.CFrame = cf
-end
-
 local divineCF = CFrame.new(-3434.6,1450.33,7881.85)
 local homeCF = CFrame.new(-3392.6,1449.33,-2911.57)
 
+local function getHRP()
+	local c = player.Character or player.CharacterAdded:Wait()
+	return c:WaitForChild("HumanoidRootPart")
+end
+
+local function tp(cf)
+	getHRP().CFrame = cf
+end
+
 task.spawn(function()
 	while true do
-		tpTo(divineCF)
-		task.wait(0.5)
-		if (player.Character.HumanoidRootPart.Position - divineCF.Position).Magnitude < 10 then
-			break
-		end
+		local hrp = getHRP()
+		if (hrp.Position - divineCF.Position).Magnitude < 10 then break end
+		hrp.CFrame = divineCF
+		task.wait(0.25)
 	end
 end)
 
 local function instantPrompts()
-	for _, v in pairs(workspace:GetDescendants()) do
+	for _,v in ipairs(workspace:GetDescendants()) do
 		if v:IsA("ProximityPrompt") then
 			v.HoldDuration = 0
 		end
@@ -38,45 +40,54 @@ end
 
 instantPrompts()
 
-local function getItem10()
+local function getSpawnedItem10()
 	local zone = workspace:FindFirstChild("ItemSpawns")
 	if not zone then return end
 	local slot = zone:FindFirstChild("10")
 	if not slot then return end
-	return slot
+
+	for _,v in ipairs(slot:GetChildren()) do
+		if v.Name == "SpawnedItem" then
+			return v
+		end
+	end
 end
 
-local picked = false
+local function tpToItem(item)
+	local part = item:FindFirstChildWhichIsA("BasePart", true)
+	if part then
+		tp(part.CFrame + Vector3.new(0,5,0))
+	end
+end
+
+local pickedConn
+
+local function handleItem(item)
+	tpToItem(item)
+
+	if pickedConn then pickedConn:Disconnect() end
+
+	pickedConn = item.AncestryChanged:Connect(function(_, parent)
+		if not parent then
+			tp(homeCF)
+		end
+	end)
+end
 
 task.spawn(function()
 	while true do
-		local slot = getItem10()
-		if slot then
-			for _, item in pairs(slot:GetChildren()) do
-				if item.Name == "SpawnedItem" then
-					local part = item:FindFirstChildWhichIsA("BasePart", true)
-					if part then
-						tpTo(part.CFrame + Vector3.new(0,5,0))
-
-						if not picked then
-							picked = true
-							item.AncestryChanged:Connect(function(_, parent)
-								if not parent then
-									tpTo(homeCF)
-								end
-							end)
-						end
-					end
-				end
-			end
+		local item = getSpawnedItem10()
+		if item then
+			handleItem(item)
+			break
 		end
-		task.wait(0.3)
+		task.wait(0.2)
 	end
 end)
 
 local function getServer()
 	local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-	local ok, res = pcall(function()
+	local ok,res = pcall(function()
 		return game:HttpGet(url)
 	end)
 
@@ -84,9 +95,9 @@ local function getServer()
 		local data = HttpService:JSONDecode(res)
 		local servers = {}
 
-		for _,server in pairs(data.data) do
-			if server.id ~= game.JobId and server.playing < server.maxPlayers then
-				table.insert(servers, server.id)
+		for _,s in ipairs(data.data) do
+			if s.id ~= game.JobId and s.playing < s.maxPlayers then
+				servers[#servers+1] = s.id
 			end
 		end
 
@@ -96,17 +107,45 @@ local function getServer()
 	end
 end
 
+local hopping = false
+
+local function serverHopPlus()
+	if hopping then return end
+	hopping = true
+
+	while true do
+		local start = tick()
+
+		repeat
+			if getSpawnedItem10() then
+				hopping = false
+				return
+			end
+			task.wait(0.2)
+		until tick() - start > 3
+
+		local id = getServer()
+		if id then
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+		else
+			TeleportService:Teleport(game.PlaceId, player)
+		end
+
+		task.wait(1)
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 220)
-frame.Position = UDim2.new(1, -240, 0.5, -110)
+frame.Size = UDim2.new(0,220,0,220)
+frame.Position = UDim2.new(1,-240,0.5,-110)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
 frame.BorderSizePixel = 0
 frame.Parent = gui
-Instance.new("UICorner", frame)
+Instance.new("UICorner",frame)
 
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 2
@@ -115,58 +154,43 @@ stroke.Parent = frame
 local hue = 0
 task.spawn(function()
 	while true do
-		hue += 0.01
-		if hue > 1 then hue = 0 end
+		hue = (hue + 0.01) % 1
 		stroke.Color = Color3.fromHSV(hue,1,1)
 		task.wait()
 	end
 end)
 
-local function makeBtn(text, y, color, callback)
+local function btn(t,y,c,f)
 	local b = Instance.new("TextButton")
 	b.Size = UDim2.new(1,-20,0,40)
 	b.Position = UDim2.new(0,10,0,y)
-	b.BackgroundColor3 = color
-	b.Text = text
+	b.BackgroundColor3 = c
+	b.Text = t
 	b.TextColor3 = Color3.new(1,1,1)
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 14
 	b.Parent = frame
-	Instance.new("UICorner", b)
-	b.MouseButton1Click:Connect(callback)
+	Instance.new("UICorner",b)
+	b.MouseButton1Click:Connect(f)
 end
 
-makeBtn("Teleport to Divine", 10, Color3.fromRGB(140, 90, 255), function()
-	tpTo(divineCF)
+btn("Teleport to Divine",10,Color3.fromRGB(140,90,255),function()
+	tp(divineCF)
 end)
 
-makeBtn("Teleport to Home", 60, Color3.fromRGB(80, 170, 255), function()
-	tpTo(homeCF)
+btn("Teleport to Home",60,Color3.fromRGB(80,170,255),function()
+	tp(homeCF)
 end)
 
-makeBtn("Server Hop", 110, Color3.fromRGB(255, 100, 120), function()
+btn("Server Hop",110,Color3.fromRGB(255,100,120),function()
 	local id = getServer()
 	if id then
-		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+		TeleportService:TeleportToPlaceInstance(game.PlaceId,id,player)
 	else
-		TeleportService:Teleport(game.PlaceId, player)
+		TeleportService:Teleport(game.PlaceId,player)
 	end
 end)
 
-makeBtn("Server Hop++", 160, Color3.fromRGB(120, 255, 180), function()
-	task.spawn(function()
-		while true do
-			local slot = getItem10()
-			if slot and #slot:GetChildren() > 0 then
-				break
-			end
-			local id = getServer()
-			if id then
-				TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-			else
-				TeleportService:Teleport(game.PlaceId, player)
-			end
-			task.wait(1)
-		end
-	end)
+btn("Server Hop++",160,Color3.fromRGB(120,255,180),function()
+	task.spawn(serverHopPlus)
 end)
