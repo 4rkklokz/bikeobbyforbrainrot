@@ -86,12 +86,6 @@ local function hopServer()
 	end
 end
 
-local function findPrompt(root)
-	for _, v in pairs(root:GetDescendants()) do
-		if v:IsA("ProximityPrompt") then return v end
-	end
-end
-
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -113,7 +107,7 @@ local btnClosedX = -(CIRCLE + EDGE)
 
 local panel = Instance.new("Frame")
 panel.Size = UDim2.new(0, PANEL_W, 0, PANEL_H)
-panel.Position = UDim2.new(1, panelOpenX, 0.5, -PANEL_H / 2)
+panel.Position = UDim2.new(1, panelOpenX, 0, 60)
 panel.BackgroundColor3 = Color3.fromRGB(11, 11, 17)
 panel.BorderSizePixel = 0
 panel.ClipsDescendants = false
@@ -122,23 +116,14 @@ Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
 
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 1.5
+stroke.Color = Color3.fromRGB(0, 220, 255)
 stroke.Parent = panel
-
-local hue = 0
-task.spawn(function()
-	while true do
-		hue += 0.004
-		if hue > 1 then hue = 0 end
-		stroke.Color = Color3.fromHSV(hue, 0.75, 1)
-		task.wait(0.03)
-	end
-end)
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, CIRCLE, 0, CIRCLE)
-toggleBtn.Position = UDim2.new(1, btnOpenX, 0.5, -CIRCLE / 2)
+toggleBtn.Position = UDim2.new(1, btnOpenX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 28, 48)
-toggleBtn.TextColor3 = Color3.fromRGB(190, 175, 255)
+toggleBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 15
 toggleBtn.Text = "›"
@@ -149,13 +134,8 @@ Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
 
 local toggleStroke = Instance.new("UIStroke")
 toggleStroke.Thickness = 1.5
+toggleStroke.Color = Color3.fromRGB(0, 220, 255)
 toggleStroke.Parent = toggleBtn
-task.spawn(function()
-	while true do
-		task.wait(0.03)
-		toggleStroke.Color = Color3.fromHSV(hue, 0.75, 1)
-	end
-end)
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -PAD * 2, 0, 22)
@@ -257,52 +237,52 @@ end)
 
 local farmRunning = false
 local farmThread = nil
-local watchdogThread = nil
-local lastActivity = os.time()
 local farmBtn = makeBtn("START FARM", 4, Color3.fromRGB(60, 180, 90), function() end)
 
+local function findPrompt(root)
+	for _, v in pairs(root:GetDescendants()) do
+		if v:IsA("ProximityPrompt") then return v end
+	end
+end
+
 local function runFarm()
-	lastActivity = os.time()
-	setStatus("Waiting for load...", true)
-	task.wait(6)
-	if not farmRunning then return end
-
-	setStatus("Checking for items...", true)
-	local ok, items = pcall(getSpawnedItems)
-	if not ok then items = {} end
-
-	if #items == 0 then
-		setStatus("Empty — hopping...", true)
-		task.wait(1)
-		hopServer()
-		return
-	end
-
-	setStatus("Items found! Collecting...", true)
-	for _, item in pairs(items) do
-		if not farmRunning then return end
-		if not item or not item.Parent then continue end
-		local mesh = item:FindFirstChild("Mesh")
-		local target = mesh or item
-		tpTo(target.CFrame)
-		task.wait(1.5)
-		for i = 1, 4 do
-			if not item or not item.Parent then break end
-			local prompt = findPrompt(target) or findPrompt(item)
-			if prompt then
-				pcall(fireproximityprompt, prompt)
-			end
-			task.wait(0.4)
-		end
-		lastActivity = os.time()
-	end
-
-	if not farmRunning then return end
-	setStatus("Going home...", true)
-	tpTo(CFrame.new(-3392.6, 1449.33, -2911.57))
+	setStatus("Going to Divine...", true)
+	tpTo(CFrame.new(-3434.6, 1450.33, 7881.85))
 	task.wait(3)
-	setStatus("Hopping...", true)
-	hopServer()
+	while farmRunning do
+		setStatus("Scanning...", true)
+		local ok, items = pcall(getSpawnedItems)
+		if not ok then items = {} end
+		if #items == 0 then
+			setStatus("No items — hopping", true)
+			task.wait(1)
+			hopServer()
+			return
+		end
+		setStatus("Collecting " .. #items .. " item(s)", true)
+		for _, item in pairs(items) do
+			if not farmRunning then break end
+			if not item or not item.Parent then continue end
+			local mesh = item:FindFirstChild("Mesh")
+			if mesh then
+				tpTo(mesh.CFrame)
+				task.wait(0.8)
+				local prompt = findPrompt(mesh) or findPrompt(item)
+				if prompt then
+					pcall(fireproximityprompt, prompt)
+					task.wait(0.5)
+				end
+			end
+		end
+		if farmRunning then
+			setStatus("Going home...", true)
+			tpTo(CFrame.new(-3392.6, 1449.33, -2911.57))
+			task.wait(2)
+			setStatus("Hopping...", true)
+			hopServer()
+			return
+		end
+	end
 end
 
 local function startFarm()
@@ -310,26 +290,13 @@ local function startFarm()
 	saveState(true)
 	farmBtn.Text = "STOP FARM"
 	farmBtn.BackgroundColor3 = Color3.fromRGB(210, 55, 70)
-	lastActivity = os.time()
 	farmThread = task.spawn(runFarm)
-	if watchdogThread then task.cancel(watchdogThread) end
-	watchdogThread = task.spawn(function()
-		while farmRunning do
-			task.wait(30)
-			if farmRunning and os.time() - lastActivity > 90 then
-				setStatus("Watchdog restart...", true)
-				if farmThread then task.cancel(farmThread) end
-				farmThread = task.spawn(runFarm)
-			end
-		end
-	end)
 end
 
 local function stopFarm()
 	farmRunning = false
 	saveState(false)
 	if farmThread then task.cancel(farmThread) farmThread = nil end
-	if watchdogThread then task.cancel(watchdogThread) watchdogThread = nil end
 	farmBtn.Text = "START FARM"
 	farmBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 90)
 	setStatus("Idle", false)
@@ -347,15 +314,13 @@ toggleBtn.MouseButton1Click:Connect(function()
 	playClick()
 	panelOpen = not panelOpen
 	TweenService:Create(panel, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0.5, -PANEL_H / 2)
+		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0, 60)
 	}):Play()
 	TweenService:Create(toggleBtn, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0.5, -CIRCLE / 2)
+		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
 	}):Play()
 	toggleBtn.Text = panelOpen and "›" or "‹"
 end)
 
 task.wait(1)
-if loadState() then
 	startFarm()
-end
