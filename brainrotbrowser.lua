@@ -107,7 +107,7 @@ local btnClosedX = -(CIRCLE + EDGE)
 
 local panel = Instance.new("Frame")
 panel.Size = UDim2.new(0, PANEL_W, 0, PANEL_H)
-panel.Position = UDim2.new(1, panelOpenX, 0, 60)
+panel.Position = UDim2.new(1, panelOpenX, 0.5, -PANEL_H / 2)
 panel.BackgroundColor3 = Color3.fromRGB(11, 11, 17)
 panel.BorderSizePixel = 0
 panel.ClipsDescendants = false
@@ -121,7 +121,7 @@ stroke.Parent = panel
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, CIRCLE, 0, CIRCLE)
-toggleBtn.Position = UDim2.new(1, btnOpenX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
+toggleBtn.Position = UDim2.new(1, btnOpenX, 0.5, -CIRCLE / 2)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 28, 48)
 toggleBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
 toggleBtn.Font = Enum.Font.GothamBold
@@ -142,7 +142,7 @@ titleLabel.Size = UDim2.new(1, -PAD * 2, 0, 22)
 titleLabel.Position = UDim2.new(0, PAD, 0, PAD + 2)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Bike Obby For Brainrots Script"
-titleLabel.TextColor3 = Color3.fromRGB(215, 200, 255)
+titleLabel.TextColor3 = Color3.fromRGB(0, 220, 255)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 12
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -163,7 +163,7 @@ byLabel.Parent = panel
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(1, -PAD * 2, 0, 1)
 divider.Position = UDim2.new(0, PAD, 0, CIRCLE + PAD + 8)
-divider.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+divider.BackgroundColor3 = Color3.fromRGB(0, 220, 255)
 divider.BorderSizePixel = 0
 divider.Parent = panel
 
@@ -194,7 +194,7 @@ statusLabel.Parent = statusRow
 
 local function setStatus(text, active)
 	statusLabel.Text = text
-	dot.BackgroundColor3 = active and Color3.fromRGB(90, 255, 150) or Color3.fromRGB(80, 80, 110)
+	dot.BackgroundColor3 = active and Color3.fromRGB(0, 220, 255) or Color3.fromRGB(80, 80, 110)
 end
 
 local function makeBtn(text, index, color, callback)
@@ -314,13 +314,13 @@ toggleBtn.MouseButton1Click:Connect(function()
 	playClick()
 	panelOpen = not panelOpen
 	TweenService:Create(panel, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0, 60)
+		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0.5, -PANEL_H / 2)
 	}):Play()
 	TweenService:Create(toggleBtn, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
+		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0.5, -CIRCLE / 2)
 	}):Play()
 	toggleBtn.Text = panelOpen and "›" or "‹"
 end)
 
 task.wait(1)
-	startFarm()
+startFarm()
