@@ -27,11 +27,13 @@ local function tpTo(cf)
 	hrp.CFrame = cf
 end
 
+local promptConn = nil
 local function instantPrompts()
 	for _, v in pairs(workspace:GetDescendants()) do
 		if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
 	end
-	workspace.DescendantAdded:Connect(function(v)
+	if promptConn then promptConn:Disconnect() end
+	promptConn = workspace.DescendantAdded:Connect(function(v)
 		if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
 	end)
 end
@@ -52,24 +54,35 @@ end
 local function getServer()
 	local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
 	local ok, res = pcall(function() return game:HttpGet(url) end)
-	if ok then
-		local data = HttpService:JSONDecode(res)
-		local servers = {}
-		for _, server in pairs(data.data) do
-			if server.id ~= game.JobId and server.playing < server.maxPlayers then
-				table.insert(servers, server.id)
-			end
+	if not ok then return nil end
+	local ok2, data = pcall(function() return HttpService:JSONDecode(res) end)
+	if not ok2 or not data or not data.data then return nil end
+	local servers = {}
+	for _, server in pairs(data.data) do
+		if server.id ~= game.JobId and server.playing < server.maxPlayers then
+			table.insert(servers, server.id)
 		end
-		if #servers > 0 then return servers[math.random(1, #servers)] end
 	end
+	if #servers > 0 then return servers[math.random(1, #servers)] end
 end
 
 local function hopServer()
-	local id = getServer()
-	if id then
-		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-	else
-		TeleportService:Teleport(game.PlaceId, player)
+	local attempts = 0
+	while attempts < 5 do
+		attempts += 1
+		local id = getServer()
+		local ok
+		if id then
+			ok = pcall(function()
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+			end)
+		else
+			ok = pcall(function()
+				TeleportService:Teleport(game.PlaceId, player)
+			end)
+		end
+		if ok then return end
+		task.wait(5)
 	end
 end
 
@@ -103,23 +116,14 @@ Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
 
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 1.5
+stroke.Color = Color3.fromRGB(0, 220, 255)
 stroke.Parent = panel
-
-local hue = 0
-task.spawn(function()
-	while true do
-		hue += 0.004
-		if hue > 1 then hue = 0 end
-		stroke.Color = Color3.fromHSV(hue, 0.75, 1)
-		task.wait()
-	end
-end)
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, CIRCLE, 0, CIRCLE)
 toggleBtn.Position = UDim2.new(1, btnOpenX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 28, 48)
-toggleBtn.TextColor3 = Color3.fromRGB(190, 175, 255)
+toggleBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 15
 toggleBtn.Text = "›"
@@ -130,13 +134,8 @@ Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
 
 local toggleStroke = Instance.new("UIStroke")
 toggleStroke.Thickness = 1.5
+toggleStroke.Color = Color3.fromRGB(0, 220, 255)
 toggleStroke.Parent = toggleBtn
-task.spawn(function()
-	while true do
-		task.wait()
-		toggleStroke.Color = Color3.fromHSV(hue, 0.75, 1)
-	end
-end)
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -PAD * 2, 0, 22)
@@ -252,7 +251,8 @@ local function runFarm()
 	task.wait(3)
 	while farmRunning do
 		setStatus("Scanning...", true)
-		local items = getSpawnedItems()
+		local ok, items = pcall(getSpawnedItems)
+		if not ok then items = {} end
 		if #items == 0 then
 			setStatus("No items — hopping", true)
 			task.wait(1)
@@ -262,13 +262,14 @@ local function runFarm()
 		setStatus("Collecting " .. #items .. " item(s)", true)
 		for _, item in pairs(items) do
 			if not farmRunning then break end
+			if not item or not item.Parent then continue end
 			local mesh = item:FindFirstChild("Mesh")
 			if mesh then
 				tpTo(mesh.CFrame)
 				task.wait(0.8)
 				local prompt = findPrompt(mesh) or findPrompt(item)
 				if prompt then
-					fireproximityprompt(prompt)
+					pcall(fireproximityprompt, prompt)
 					task.wait(0.5)
 				end
 			end
@@ -322,6 +323,4 @@ toggleBtn.MouseButton1Click:Connect(function()
 end)
 
 task.wait(1)
-if loadState() then
 	startFarm()
-end
