@@ -67,11 +67,22 @@ local function getServer()
 end
 
 local function hopServer()
-	local id = getServer()
-	if id then
-		TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
-	else
-		TeleportService:Teleport(game.PlaceId, player)
+	local attempts = 0
+	while attempts < 5 do
+		attempts += 1
+		local id = getServer()
+		local ok
+		if id then
+			ok = pcall(function()
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, id, player)
+			end)
+		else
+			ok = pcall(function()
+				TeleportService:Teleport(game.PlaceId, player)
+			end)
+		end
+		if ok then return end
+		task.wait(5)
 	end
 end
 
@@ -250,37 +261,77 @@ local function findPrompt(root)
 	end
 end
 
+local function collectItems()
+	local ok, items = pcall(getSpawnedItems)
+	if not ok then items = {} end
+	if #items == 0 then return true end
+
+	setStatus("Collecting " .. #items .. " item(s)", true)
+	for _, item in pairs(items) do
+		if not farmRunning then return false end
+		if not item or not item.Parent then continue end
+		local mesh = item:FindFirstChild("Mesh")
+		if mesh then
+			tpTo(mesh.CFrame)
+			task.wait(1.5)
+			local prompt = findPrompt(mesh) or findPrompt(item)
+			if prompt then
+				pcall(fireproximityprompt, prompt)
+				task.wait(1)
+			end
+		end
+		lastActivity = os.time()
+	end
+
+	task.wait(2)
+	local ok2, remaining = pcall(getSpawnedItems)
+	if not ok2 then remaining = {} end
+
+	if #remaining > 0 then
+		setStatus("Items remain, retrying...", true)
+		for _, item in pairs(remaining) do
+			if not farmRunning then return false end
+			if not item or not item.Parent then continue end
+			local mesh = item:FindFirstChild("Mesh")
+			if mesh then
+				tpTo(mesh.CFrame)
+				task.wait(1.5)
+				local prompt = findPrompt(mesh) or findPrompt(item)
+				if prompt then
+					pcall(fireproximityprompt, prompt)
+					task.wait(1)
+				end
+			end
+			lastActivity = os.time()
+		end
+	end
+
+	return true
+end
+
 local function runFarm()
 	lastActivity = os.time()
 	setStatus("Going to Divine...", true)
 	tpTo(CFrame.new(-3434.6, 1450.33, 7881.85))
-	task.wait(4)
+	task.wait(6)
+
 	while farmRunning do
 		lastActivity = os.time()
 		setStatus("Scanning...", true)
+
 		local ok, items = pcall(getSpawnedItems)
 		if not ok then items = {} end
+
 		if #items == 0 then
 			setStatus("No items — hopping", true)
 			task.wait(2)
 			hopServer()
 			return
 		end
-		setStatus("Collecting " .. #items .. " item(s)", true)
-		for _, item in pairs(items) do
-			if not farmRunning then break end
-			local mesh = item:FindFirstChild("Mesh")
-			if mesh then
-				tpTo(mesh.CFrame)
-				task.wait(1)
-				local prompt = findPrompt(mesh) or findPrompt(item)
-				if prompt then
-					pcall(fireproximityprompt, prompt)
-					task.wait(0.6)
-				end
-			end
-			lastActivity = os.time()
-		end
+
+		local success = collectItems()
+		if not success then return end
+
 		if farmRunning then
 			setStatus("Going home...", true)
 			tpTo(CFrame.new(-3392.6, 1449.33, -2911.57))
@@ -303,7 +354,7 @@ local function startFarm()
 	watchdogThread = task.spawn(function()
 		while farmRunning do
 			task.wait(30)
-			if farmRunning and os.time() - lastActivity > 60 then
+			if farmRunning and os.time() - lastActivity > 90 then
 				setStatus("Watchdog restart...", true)
 				if farmThread then task.cancel(farmThread) end
 				farmThread = task.spawn(runFarm)
