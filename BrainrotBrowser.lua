@@ -86,6 +86,12 @@ local function hopServer()
 	end
 end
 
+local function findPrompt(root)
+	for _, v in pairs(root:GetDescendants()) do
+		if v:IsA("ProximityPrompt") then return v end
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -107,7 +113,7 @@ local btnClosedX = -(CIRCLE + EDGE)
 
 local panel = Instance.new("Frame")
 panel.Size = UDim2.new(0, PANEL_W, 0, PANEL_H)
-panel.Position = UDim2.new(1, panelOpenX, 0, 60)
+panel.Position = UDim2.new(1, panelOpenX, 0.5, -PANEL_H / 2)
 panel.BackgroundColor3 = Color3.fromRGB(11, 11, 17)
 panel.BorderSizePixel = 0
 panel.ClipsDescendants = false
@@ -130,7 +136,7 @@ end)
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, CIRCLE, 0, CIRCLE)
-toggleBtn.Position = UDim2.new(1, btnOpenX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
+toggleBtn.Position = UDim2.new(1, btnOpenX, 0.5, -CIRCLE / 2)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 28, 48)
 toggleBtn.TextColor3 = Color3.fromRGB(190, 175, 255)
 toggleBtn.Font = Enum.Font.GothamBold
@@ -255,92 +261,48 @@ local watchdogThread = nil
 local lastActivity = os.time()
 local farmBtn = makeBtn("START FARM", 4, Color3.fromRGB(60, 180, 90), function() end)
 
-local function findPrompt(root)
-	for _, v in pairs(root:GetDescendants()) do
-		if v:IsA("ProximityPrompt") then return v end
-	end
-end
-
-local function collectItems()
-	local ok, items = pcall(getSpawnedItems)
-	if not ok then items = {} end
-	if #items == 0 then return true end
-
-	setStatus("Collecting " .. #items .. " item(s)", true)
-	for _, item in pairs(items) do
-		if not farmRunning then return false end
-		if not item or not item.Parent then continue end
-		local mesh = item:FindFirstChild("Mesh")
-		if mesh then
-			tpTo(mesh.CFrame)
-			task.wait(1.5)
-			local prompt = findPrompt(mesh) or findPrompt(item)
-			if prompt then
-				pcall(fireproximityprompt, prompt)
-				task.wait(1)
-			end
-		end
-		lastActivity = os.time()
-	end
-
-	task.wait(2)
-	local ok2, remaining = pcall(getSpawnedItems)
-	if not ok2 then remaining = {} end
-
-	if #remaining > 0 then
-		setStatus("Items remain, retrying...", true)
-		for _, item in pairs(remaining) do
-			if not farmRunning then return false end
-			if not item or not item.Parent then continue end
-			local mesh = item:FindFirstChild("Mesh")
-			if mesh then
-				tpTo(mesh.CFrame)
-				task.wait(1.5)
-				local prompt = findPrompt(mesh) or findPrompt(item)
-				if prompt then
-					pcall(fireproximityprompt, prompt)
-					task.wait(1)
-				end
-			end
-			lastActivity = os.time()
-		end
-	end
-
-	return true
-end
-
 local function runFarm()
 	lastActivity = os.time()
-	setStatus("Going to Divine...", true)
-	tpTo(CFrame.new(-3434.6, 1450.33, 7881.85))
+	setStatus("Waiting for load...", true)
 	task.wait(6)
+	if not farmRunning then return end
 
-	while farmRunning do
-		lastActivity = os.time()
-		setStatus("Scanning...", true)
+	setStatus("Checking for items...", true)
+	local ok, items = pcall(getSpawnedItems)
+	if not ok then items = {} end
 
-		local ok, items = pcall(getSpawnedItems)
-		if not ok then items = {} end
-
-		if #items == 0 then
-			setStatus("No items — hopping", true)
-			task.wait(2)
-			hopServer()
-			return
-		end
-
-		local success = collectItems()
-		if not success then return end
-
-		if farmRunning then
-			setStatus("Going home...", true)
-			tpTo(CFrame.new(-3392.6, 1449.33, -2911.57))
-			task.wait(3)
-			setStatus("Hopping...", true)
-			hopServer()
-			return
-		end
+	if #items == 0 then
+		setStatus("Empty — hopping...", true)
+		task.wait(1)
+		hopServer()
+		return
 	end
+
+	setStatus("Items found! Collecting...", true)
+	for _, item in pairs(items) do
+		if not farmRunning then return end
+		if not item or not item.Parent then continue end
+		local mesh = item:FindFirstChild("Mesh")
+		local target = mesh or item
+		tpTo(target.CFrame)
+		task.wait(1.5)
+		for i = 1, 4 do
+			if not item or not item.Parent then break end
+			local prompt = findPrompt(target) or findPrompt(item)
+			if prompt then
+				pcall(fireproximityprompt, prompt)
+			end
+			task.wait(0.4)
+		end
+		lastActivity = os.time()
+	end
+
+	if not farmRunning then return end
+	setStatus("Going home...", true)
+	tpTo(CFrame.new(-3392.6, 1449.33, -2911.57))
+	task.wait(3)
+	setStatus("Hopping...", true)
+	hopServer()
 end
 
 local function startFarm()
@@ -385,10 +347,10 @@ toggleBtn.MouseButton1Click:Connect(function()
 	playClick()
 	panelOpen = not panelOpen
 	TweenService:Create(panel, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0, 60)
+		Position = UDim2.new(1, panelOpen and panelOpenX or panelClosedX, 0.5, -PANEL_H / 2)
 	}):Play()
 	TweenService:Create(toggleBtn, tweenInfo, {
-		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0, 60 + PANEL_H / 2 - CIRCLE / 2)
+		Position = UDim2.new(1, panelOpen and btnOpenX or btnClosedX, 0.5, -CIRCLE / 2)
 	}):Play()
 	toggleBtn.Text = panelOpen and "›" or "‹"
 end)
